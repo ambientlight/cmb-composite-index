@@ -5,6 +5,6 @@ Reference implementations for Metatrader 4/5 are also provided (credits to Mlade
 
 # Usage
 
-1. Open CMBCompositeIndex\CMBCompositeIndex.sln in Visual Studio 2019/2022
+1. Open `CMBCompositeIndex\CMBCompositeIndex.sln` in Visual Studio 2019/2022
 2. Build the solution for x86 Release.
 3. In Forex Tester 5, under Home tab, Indicators (List of indicator) -> Install New Indicator, you will find the CMBCompositeIndex.dll at `CMBCompositeIndex\Release\CMBCompositeIndex.dll`
