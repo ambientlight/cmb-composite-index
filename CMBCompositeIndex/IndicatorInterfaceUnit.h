@@ -786,15 +786,15 @@ void ObjectsDeleteAll(int window = 0, TObjectType ObjType = obj_AnyObject);
 // Color - font color
 // function returns true if successful
 bool ObjectSetText(PChar name, PChar text, int FontSize = 12,
-    const PChar FontName = "Arial", TColor Color = clRed);
+    PChar FontName = "Arial", TColor Color = clRed);
 bool ObjectSetText(PChar name, string string, int FontSize = 12,
-    const PChar FontName = "Arial", TColor Color = clRed);
+    PChar FontName = "Arial", TColor Color = clRed);
 bool ObjectSetText(PChar name, stringstream& string, int FontSize = 12,
-    const PChar FontName = "Arial", TColor Color = clRed);
+    PChar FontName = "Arial", TColor Color = clRed);
 bool ObjectSetText(PChar name, double d, int FontSize = 12,
-    const PChar FontName = "Arial", TColor Color = clRed);
+    PChar FontName = "Arial", TColor Color = clRed);
 bool ObjectSetText(PChar name, int i, int FontSize = 12,
-    const PChar FontName = "Arial", TColor Color = clRed);
+    PChar FontName = "Arial", TColor Color = clRed);
 
 // get text/description of the object
 // name - name of the object

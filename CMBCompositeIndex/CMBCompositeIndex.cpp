@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------
-// CMBCompositeIndex indicator
+// Ishimoku indicator
 //---------------------------------------------------------------------------
 
 #include <windows.h>
@@ -12,109 +12,74 @@
 #include <algorithm>
 
 enum TPriceType { pt_Close, pt_Open, pt_High, pt_Low, pt_HL2, pt_HLC3, pt_HLCC4 };
-
-int InputRSISlowPeriod = 14;
-int InputRSIFastPeriod = 3;
-int InputMomentumPeriod = 9;
-int InputMAPeriod1 = 3;
-int InputMAPeriod2 = 13;
-int InputMAPeriod3 = 33;
 TPriceType InputPriceMode = pt_Close;
 
+int PriceRSISlowPeriod;
+int PriceRSIFastPeriod;
+int CompositeRSIMomentumPeriod;
+int CompositeRSISMAPeriod;
+int CompositeFastSMAPeriod;
+int CompositeSlowSMAPeriod;
+
 // Buffers
-TIndexBuffer CompositeBuffer, FastMABuffer, SlowMABuffer;
+TIndexBuffer Composite, FastMA, SlowMA;
 
 //---------------------------------------------------------------------------
 // Initialize indicator
 //---------------------------------------------------------------------------
-EXPORT void Init()
+EXPORT void __stdcall Init()
 {
     // define properties
-    char indicatorName[] = "CMB Composite Index";
-    char seperatorName[] = "Common";
-
-    IndicatorShortName(indicatorName);
+    IndicatorShortName("CMB Composite Index");
     SetOutputWindow(ow_SeparateWindow);
 
     // register options
-    AddSeparator(seperatorName);
+    AddSeparator("Common");
 
-    char InputMAPeriod1Label[] = "Input MA Period 1";
-    char InputMAPeriod2Label[] = "Input MA Period 2";
-    char InputMAPeriod3Label[] = "Input MA Period 3";
+    RegOption("Price RSI Slow period", ot_Integer, &PriceRSISlowPeriod);
+    SetOptionRange("Price RSI Slow period", 1, MAXINT32);
+    PriceRSISlowPeriod = 14;
 
-    RegOption(InputMAPeriod1Label, ot_Integer, &InputMAPeriod1);
-    SetOptionRange(InputMAPeriod1Label, 1, INT32_MAX);
-    InputMAPeriod1 = 3;
+    RegOption("Price RSI Fast period", ot_Integer, &PriceRSIFastPeriod);
+    SetOptionRange("Price RSI Fast period", 1, MAXINT32);
+    PriceRSIFastPeriod = 3;
 
-    RegOption(InputMAPeriod2Label, ot_Integer, &InputMAPeriod2);
-    SetOptionRange(InputMAPeriod2Label, 1, INT32_MAX);
-    InputMAPeriod2 = 13;
+    RegOption("Composite RSI Momentum period", ot_Integer, &CompositeRSIMomentumPeriod);
+    SetOptionRange("Composite RSI Momentum period", 1, MAXINT32);
+    CompositeRSIMomentumPeriod = 9;
 
-    RegOption(InputMAPeriod3Label, ot_Integer, &InputMAPeriod3);
-    SetOptionRange(InputMAPeriod3Label, 1, INT32_MAX);
-    InputMAPeriod1 = 33;
+    RegOption("Composite RSI SMA period", ot_Integer, &CompositeRSISMAPeriod);
+    SetOptionRange("Composite RSI SMA period", 1, MAXINT32);
+    CompositeRSISMAPeriod = 3;
+
+    RegOption("Fast SMA period", ot_Integer, &CompositeFastSMAPeriod);
+    SetOptionRange("Fast SMA period", 1, MAXINT32);
+    CompositeFastSMAPeriod = 13;
+
+    RegOption("Slow SMA period", ot_Integer, &CompositeSlowSMAPeriod);
+    SetOptionRange("Slow SMA period", 1, MAXINT32);
+    CompositeSlowSMAPeriod = 33;
 
     // create buffers
-    CompositeBuffer = CreateIndexBuffer();
-    FastMABuffer = CreateIndexBuffer();
-    SlowMABuffer = CreateIndexBuffer();
-    
+    Composite = CreateIndexBuffer();
+    FastMA = CreateIndexBuffer();
+    SlowMA = CreateIndexBuffer();
+
     IndicatorBuffers(3);
-    SetIndexBuffer(0, CompositeBuffer);
-    SetIndexBuffer(1, FastMABuffer);
-    SetIndexBuffer(2, SlowMABuffer);
-    
-    char CompositeLabel[] = "Composite index";
-    char FastMALabel[] = "Composite index Fast SMA";
-    char SlowMALabel[] = "Composite index Slow SMA";
+    SetIndexBuffer(0, Composite);
+    SetIndexBuffer(1, FastMA);
+    SetIndexBuffer(2, SlowMA);
+
     SetIndexStyle(0, ds_Line, psSolid, 1, clDarkGray);
-    SetIndexLabel(0, CompositeLabel);
+    SetIndexLabel(0, "Composite index");
     SetIndexStyle(1, ds_Line, psSolid, 1, clLimeGreen);
-    SetIndexLabel(1, FastMALabel);
+    SetIndexLabel(1, "Composite index Fast MA");
     SetIndexStyle(2, ds_Line, psSolid, 1, clOrangeRed);
-    SetIndexLabel(2, SlowMALabel);
-    //SetFixedMinMaxValues(0, 100);
+    SetIndexLabel(2, "Composite index Slow MA");
 }
 
-EXPORT void OnParamsChange()
+EXPORT void __stdcall OnParamsChange()
 {
-    
-}
-
-double GetEMA(const std::vector<double>& priceBars, int index, int shift, int period, double prev)
-{
-    int i;
-    double k, sum, weight;
-
-    // EMA
-    // decay has been changed from 2.0 / (span + 1) -> 1.0 / (1.0 + com)
-    // this makes it match MetaTrader's way of calculating RSI
-    int com = period - 1;
-    k = 1.0 / (com + 1);
-    i = index + shift;
-    if ((i > Bars() - 1) || (i < 0)) return 0;
-
-    if (prev == 0)
-        return priceBars[i];
-    else
-        return (prev + k * (priceBars[i] - prev));
-}
-
-double GetSMA(const std::vector<double>& priceBars, int index, int shift, int period)
-{
-    int i;
-    double sum;
-
-    // SMA
-    if ((index + shift + period >= Bars()) || (index < 0)) return 0;
-
-    sum = 0;
-    for (i = index; i < index + period; i++) {
-        sum += priceBars[i + shift];
-    }
-
-    return sum / period;
 }
 
 double GetPrice(int index, TPriceType PriceType)
@@ -131,6 +96,41 @@ double GetPrice(int index, TPriceType PriceType)
     }
 
     return 0;
+}
+
+double GetEMA(const std::vector<double>& priceBars, int index, int shift, int period, double prev)
+{
+    int i;
+    double k, sum, weight;
+
+    // EMA
+    // decay has been changed from 2.0 / (span + 1) -> 1.0 / (1.0 + com)
+    // this makes it match MetaTrader's way of calculating RSI
+    int com = period - 1;
+    k = 1.0 / (com + 1);
+    i = index + shift;
+    if ((i > priceBars.size() - 1) || (i < 0)) return 0;
+
+    if (prev == 0)
+        return priceBars[i];
+    else
+        return (prev + k * (priceBars[i] - prev));
+}
+
+double GetSMA(const std::vector<double>& priceBars, int index, int shift, int period)
+{
+    int i;
+    double sum;
+
+    // SMA
+    if ((index + shift + period >= priceBars.size()) || (index < 0)) return 0;
+
+    sum = 0;
+    for (i = index; i < index + period; i++) {
+        sum += priceBars[i + shift];
+    }
+
+    return sum / period;
 }
 
 std::vector<double> GetRSI(int total, int period, TPriceType ApplyTo) {
@@ -157,7 +157,7 @@ std::vector<double> GetRSI(int total, int period, TPriceType ApplyTo) {
     for (int i = 1; i < total; i++) {
         maUpPrev = GetEMA(up, i, 0, period, maUpPrev);
         maDownPrev = GetEMA(down, i, 0, period, maDownPrev);
-        
+
         double maUp = maUpPrev;
         double maDown = maDownPrev;
         double RS = maUp / maDown;
@@ -180,36 +180,37 @@ void PrecalculateIfChanged(std::string key) {
     }
 
     _cacheKey = key;
-    // Print(std::string("CMB Composite Index: precalculating for key: ") + key);
+    //Print(std::string("CMB Composite Index: precalculating for key: ") + key);
 
-    _RSISlowCache = GetRSI(Bars(), InputRSISlowPeriod, InputPriceMode);
-    _RSIFastCache = GetRSI(Bars(), InputRSIFastPeriod, InputPriceMode);
+    _RSISlowCache = GetRSI(Bars(), PriceRSISlowPeriod, InputPriceMode);
+    _RSIFastCache = GetRSI(Bars(), PriceRSIFastPeriod, InputPriceMode);
     _CompositeCache.reserve(Bars());
     for (size_t i = 0; i < Bars(); i++) {
-        double RSIDelta = i > InputMomentumPeriod ? _RSISlowCache[i] - _RSISlowCache[i - InputMomentumPeriod] : 0;
-        double RSISMA = GetSMA(_RSIFastCache, i - InputMAPeriod1, 0, InputMAPeriod1);
-        _CompositeCache[i] = RSIDelta + RSISMA;
+        double RSIDelta = i > CompositeRSIMomentumPeriod ? _RSISlowCache[i] - _RSISlowCache[i - CompositeRSIMomentumPeriod] : 0;
+        double RSISMA = GetSMA(_RSIFastCache, i - CompositeRSISMAPeriod, 0, CompositeRSISMAPeriod);
+        _CompositeCache.push_back(RSIDelta + RSISMA);
     }
 
     _FastMACache.reserve(Bars());
     _SlowMACache.reserve(Bars());
     for (size_t i = 0; i < Bars(); i++) {
-        _FastMACache[i] = GetSMA(_CompositeCache, i - InputMAPeriod2, 0, InputMAPeriod2);
-        _SlowMACache[i] = GetSMA(_CompositeCache, i - InputMAPeriod3, 0, InputMAPeriod3);
+        _FastMACache.push_back(GetSMA(_CompositeCache, i - CompositeFastSMAPeriod, 0, CompositeFastSMAPeriod));
+        _SlowMACache.push_back(GetSMA(_CompositeCache, i - CompositeSlowSMAPeriod, 0, CompositeSlowSMAPeriod));
     }
 }
 
 //---------------------------------------------------------------------------
 // Calculate requested bar
 //---------------------------------------------------------------------------
-EXPORT void Calculate(int index)
+EXPORT void __stdcall Calculate(int index)
 {
     std::stringstream key; key << Bars() << "," << Timeframe() << "," << Symbol();
     PrecalculateIfChanged(key.str());
 
     // like MT4, ForexTester is indexing from most recent to oldest
     int i = Bars() - 1 - index;
-    CompositeBuffer[index] = _CompositeCache[i];
-    FastMABuffer[index] = _FastMACache[i];
-    SlowMABuffer[index] = _SlowMACache[i];
+
+    Composite[index] = _CompositeCache[i];
+    FastMA[index] = _FastMACache[i];
+    SlowMA[index] = _SlowMACache[i];
 }
